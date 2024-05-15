@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    command: node index.js
+    ports:
+      - "3000:3000"
+    environment:
+      APP_HOST: localhost
+      APP_PORT: 3000
+      TZ: "Europe/Moscow"
+
+  tests:
+    build: .
+    command: npm test
+    depends_on:
+      - app
+    environment:
+      APP_HOST: app
+      APP_PORT: 3000
+      TZ: "Europe/Moscow"
+
+

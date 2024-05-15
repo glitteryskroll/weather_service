@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Weather Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 12px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button[type="submit"] {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        #weather-info {
+            margin-top: 20px;
+            margin-left: 15px;
+        }
+
+        #weather-info table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #weather-info th,
+        #weather-info td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #weather-info th {
+            background-color: #f2f2f2;
+        }
+
+        .form-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Documentation and API in github: <a
+                href="https://github.com/glitteryskroll/weather_service">https://github.com/glitteryskroll/weather_service</a></h1>
+    </div>
+    <div class="form-container">
+        <form id="weather-form" action="/forecast" method="get">
+            <div>
+                <label for="q">City Name:</label>
+                <input type="text" id="q" name="q">
+            </div>
+            <div>
+                <label for="latitude">Latitude:</label>
+                <input type="text" id="latitude" name="latitude">
+            </div>
+            <div>
+                <label for="longitude">Longitude:</label>
+                <input type="text" id="longitude" name="longitude">
+            </div>
+            <div>
+                <label for="hour">Hour:</label>
+                <input type="text" id="hour" name="hour" value="14">
+            </div>
+            <button type="submit">Get Forecast</button>
+        </form>
+
+        <div id="weather-info"></div>
+    </div>
+    <script>
+        document.getElementById('weather-form').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const queryParams = new URLSearchParams(formData).toString();
+
+            try {
+                const response = await fetch(`/forecast?${queryParams}`);
+                const data = await response.json();
+
+                const weatherInfoDiv = document.getElementById('weather-info');
+                weatherInfoDiv.innerHTML = `<h2>Weather ${data.locationInfo} Forecast</h2>`;
+
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+
+                const headers = ['Date', 'Time', 'Temperature', 'Symbol', 'Wind Direction', 'Wind Speed', 'Pressure', 'Humidity'];
+                const headerRow = document.createElement('tr');
+                headers.forEach(headerText => {
+                    const th = document.createElement('th');
+                    th.textContent = headerText;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                data.days.forEach(day => {
+                    const row = document.createElement('tr');
+                    const keys = ['date', 'time', 'temperature', 'symbol', 'wind', 'pressure', 'humidity'];
+                    keys.forEach(key => {
+                        if (key === 'wind') {
+                            console.log(key, day)
+                            const direction_td = document.createElement('td');
+                            direction_td.textContent = `${day['additionalInfo'][key].direction} `;
+                            row.appendChild(direction_td);
+                            const speed_td = document.createElement('td');
+                            speed_td.textContent = `(${day['additionalInfo'][key].speed}) m/s`;
+                            row.appendChild(speed_td);
+                        } else if (key == 'humidity' || key == 'pressure') {
+                            const td = document.createElement('td');
+                            td.textContent = `${day['additionalInfo'][key].value} `;
+                            row.appendChild(td);
+                        }
+                        else if (key === 'symbol') {
+                            var td_row = '';
+                            for (var symbol_key in day['additionalInfo'][key]) {
+                                td_row = td_row + `${symbol_key}:${day['additionalInfo'][key][symbol_key]} `;
+                            }
+                            const td = document.createElement('td');
+                            td.textContent = td_row;
+                            row.appendChild(td);
+                        }
+                        else {
+                            const td = document.createElement('td');
+                            console.log(day[key])
+                            if (typeof day[key] === 'object') {
+                                const additionalInfo = [];
+                                for (const infoKey in day[key]) {
+                                    additionalInfo.push(`${infoKey}: ${day[key][infoKey]}`);
+                                }
+                                td.textContent = additionalInfo.join(', ');
+                            } else {
+                                td.textContent = day[key];
+                            }
+                            row.appendChild(td);
+                        }
+                    });
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+                weatherInfoDiv.appendChild(table);
+            } catch (error) {
+                console.error('Error fetching or displaying weather data:', error);
+            }
+        });
+
+        document.getElementById('q').addEventListener('input', function () {
+            const cityNameInput = document.getElementById('q');
+            const latitudeInput = document.getElementById('latitude');
+            const longitudeInput = document.getElementById('longitude');
+
+            if (cityNameInput.value.trim() !== '') {
+                latitudeInput.value = '';
+                longitudeInput.value = '';
+                latitudeInput.disabled = true;
+                longitudeInput.disabled = true;
+            } else {
+                latitudeInput.disabled = false;
+                longitudeInput.disabled = false;
+            }
+        });
+
+        document.getElementById('latitude').addEventListener('input', function () {
+            const cityNameInput = document.getElementById('q');
+
+            if (this.value.trim() !== '') {
+                cityNameInput.value = '';
+                cityNameInput.disabled = true;
+            } else {
+                cityNameInput.disabled = false;
+            }
+        });
+
+        document.getElementById('longitude').addEventListener('input', function () {
+            const cityNameInput = document.getElementById('q');
+
+            if (this.value.trim() !== '') {
+                cityNameInput.value = '';
+                cityNameInput.disabled = true;
+            } else {
+                cityNameInput.disabled = false;
+            }
+        });
+
+
+    </script>
+</body>
+
+</html>
